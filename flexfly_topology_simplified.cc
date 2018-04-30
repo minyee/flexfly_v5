@@ -14,17 +14,26 @@
 #include "flexfly_topology_simplified.h"
 #include "link_stealing.h"
 #include <queue>
+#include <sstmac/common/thread_lock.h>
 namespace sstmac {
 namespace hw {
 
  // NOTE: the switch with the same id as the max_switch_id_ is the optical switch.
  flexfly_topology_simplified::flexfly_topology_simplified(sprockit::sim_parameters* params) : 
-                              structured_topology(params,InitMaxPortsIntra::I_Remembered, 
+                              structured_topology(params,
+                                                  InitMaxPortsIntra::I_Remembered,
                                                   InitGeomEjectID::I_Remembered) {
   std::cout << "flexfly_topology_simplified called" << std::endl;
   num_groups_ = params->get_int_param("groups"); // controls g
  	switches_per_group_ = params->get_int_param("switches_per_group"); // controls a
+  
+  bool has_seed = params->has_param("seed");
+  if (!has_seed) {
+    params->add_param_override("seed", 66);
+  }
+  
  	nodes_per_switch_ = params->get_int_param("nodes_per_switch");
+  concentration_ = nodes_per_switch_;
   traffic_matrix_filename_ = params->get_optional_param("traffic_matrix_filename", "traffic_matrix.txt");
   link_stealing_ = params->get_bool_param("link_steal");
   cheat_optical_bandwidth_ = params->get_optional_bool_param("cheat", false);
@@ -44,6 +53,7 @@ namespace hw {
       }
     }
   }
+
  	
   
   
@@ -69,12 +79,14 @@ namespace hw {
       std::cout << std::endl;
     }
   }
+
   setup_flexfly_topology_simplified();
   route_topology();
-  int diam = diameter();
-  std::cout << "The diameter of this topology is: " << std::to_string(diam) << std::endl;
+  
+  
   std::cout << "got out of flexfly_topol constructor?" << std::endl;
  }
+
 
  flexfly_topology_simplified::~flexfly_topology_simplified() {
     for (const std::pair<switch_id, std::vector<switch_link*>> elem : switch_outport_connection_map_) {
@@ -110,6 +122,7 @@ namespace hw {
   int last_used_inport[max_switch_id_ + 1];
   std::memset(&last_used_outport, 0, sizeof(int) * (max_switch_id_ + 1));
   std::memset(&last_used_inport, 0, sizeof(int) * (max_switch_id_ + 1));
+
   for (switch_id src_group = 0; src_group < num_groups_; src_group++) {
     for (switch_id dst_group = 0; dst_group < num_groups_; dst_group++) {
       if ((src_group == dst_group) || (group_connectivity_matrix_[src_group][dst_group] == 0)) 
@@ -119,6 +132,10 @@ namespace hw {
       connect_switches(src_group, last_used_outport[src_group], dst_group, last_used_inport[dst_group], Optical);
       last_used_outport[src_group]++;
       last_used_inport[dst_group]++;
+
+      // Added for UGAL-G routing
+
+      // Added for UGAL-G routing
     }
   }
 
@@ -130,10 +147,17 @@ namespace hw {
   **/
  void flexfly_topology_simplified::minimal_route_to_switch(switch_id src_switch_addr, 
  												switch_id dst_switch_addr, 
- 												routable::path& path) const {
-  path.vc = 0;
+ 												packet::path& path) const {
+  
+  if (src_switch_addr >= num_groups_ || dst_switch_addr >= num_groups_) {
+    std::cerr << "src: " << std::to_string(src_switch_addr) << " and dst: " << std::to_string(dst_switch_addr) << std::endl;
+    abort();
+  }
+  //path.vc = 0;
   path.set_outport(routing_table_[src_switch_addr][dst_switch_addr]);
-  path.set_local_outport(routing_table_[src_switch_addr][dst_switch_addr]);
+  //path.set_local_outport(routing_table_[src_switch_addr][dst_switch_addr]);
+  //g2g_traffic_matrix_[src_switch_addr][dst_switch_addr]++;
+  
  };
 
   // DONE
@@ -163,7 +187,8 @@ namespace hw {
 
  void flexfly_topology_simplified::configure_nonuniform_switch_params(switch_id src, sprockit::sim_parameters* switch_params) const {
     switch_params->add_param_override("id", int(src));
-    switch_params->add_param_override("model", "pisces");
+    //switch_params->add_param_override("model", "pisces");
+    //switch_params->add_param_override("model", "sculpin");
     switch_params->add_param_override("switches_per_group", int(switches_per_group_));
     switch_params->add_param_override("num_groups", int(num_groups_));
     auto switch_outport_vector_iter = switch_outport_connection_map_.find(src);
@@ -172,8 +197,8 @@ namespace hw {
       radix_for_switches = (switch_outport_vector_iter->second).size();
     }
     switch_params->add_param_override("total_radix", int(radix_for_switches + (switches_per_group_ * nodes_per_switch_))); 
-    sprockit::sim_parameters* ej_params = switch_params->get_namespace("ejection");
-    long num_credits = ej_params->get_byte_length_param("credits");
+    //sprockit::sim_parameters* ej_params = switch_params->get_namespace("ejection");
+    //long num_credits = ej_params->get_byte_length_param("credits");
   }
  
 
@@ -224,6 +249,7 @@ bool flexfly_topology_simplified::switch_id_slot_filled(switch_id sid) const {
   return (sid <= max_switch_id_);
 }
 
+/*
  void flexfly_topology_simplified::configure_vc_routing(std::map<routing::algorithm_t, int>& m) const {
   m.insert({routing::minimal, 1});
   m.insert({routing::minimal_adaptive, 1});
@@ -231,7 +257,7 @@ bool flexfly_topology_simplified::switch_id_slot_filled(switch_id sid) const {
   m.insert({routing::ugal, 1});
   return;
  };
-
+*/
   switch_id flexfly_topology_simplified::node_to_ejection_switch(node_id addr, uint16_t& port) const {
     switch_id swid = node_to_switch(addr);
     switch_id group = group_from_swid(swid);
@@ -259,7 +285,8 @@ bool flexfly_topology_simplified::switch_id_slot_filled(switch_id sid) const {
     if (src == dst) { // same switch
       return 1;
     } else { // different group but can reach either by 1 global and 1 local or 1 local and then 1 global
-      return (distance_matrix_[src][dst] * 2) + 1;
+      return 3;
+      //return (distance_matrix_[src][dst] * 2) + 1;
     }
   };
 
@@ -496,6 +523,53 @@ bool flexfly_topology_simplified::switch_id_slot_filled(switch_id sid) const {
       //routing_table_[src][i] = curr_id; // try to have routing table just use the src_outport instead
     }
   };
+
+/*
+void flexfly_topology_simplified::new_routing_stage(routable* rtbl) {
+  rtbl->current_path().unset_metadata_bit(routable::crossed_timeline);
+};
+*/
+
+// really what this method is doing is to find a different group all together, in that it really
+// just 
+switch_id flexfly_topology_simplified::random_intermediate_switch(switch_id current_sw,
+                             switch_id dest_sw, uint32_t seed) {
+  long nid = current_sw;
+  uint32_t attempt = 0;
+  
+  while (current_sw == nid) {
+    break;
+  }
+
+  long curr_group = long(current_sw);
+  return switch_id(nid);
+};
+
+
+bool flexfly_topology_simplified::is_global_port(int port) const {
+  bool is_globe_port = true;
+  if (port < switches_per_group_ * nodes_per_switch_) {
+    is_globe_port = false;
+  }
+  return true;
+}
+
+switch_id flexfly_topology_simplified::random_intermediate_group(switch_id current_group,
+                             switch_id dest_group, uint32_t seed) {
+  assert(current_group != dest_group);
+  long attempt = 0;
+  bool not_satisfied = true;
+  switch_id intermediate_group = num_groups_;
+  while (true) {
+    long intermediate_group_switch = long(random_number(num_groups_, attempt, seed));
+    if (intermediate_group_switch != current_group && intermediate_group_switch != dest_group) {
+      intermediate_group = intermediate_group_switch;
+      break;
+    }
+  }   
+  return switch_id(intermediate_group);
+}
+
 
 }
 }

@@ -267,7 +267,7 @@ void simple_rounding_down(matrix_float& float_matrix, matrix_int& int_matrix) {
 
 
 
-
+/*
 int main(int argc, char* argv[]) {
 	std::cout << "main function has been reached" << std::endl;
 	if (argc >= 2) {
@@ -302,7 +302,7 @@ int main(int argc, char* argv[]) {
 }
 
 
-
+*/
 
 
 /*

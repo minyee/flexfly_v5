@@ -7,6 +7,7 @@
 #include <vector>
 #include <sstmac/hardware/topology/topology.h>
 #include <sstmac/hardware/topology/structured_topology.h>
+//#include <sstmac/hardware/topology/abstract_dragonfly.h>
 #include <unordered_map>
 #include "flexfly_switch_link.h"
 
@@ -39,9 +40,6 @@ RegisterComponent("flexfly", topology, flexfly_topology_simplified,
 */
 // this is for the structured_topology inheritance since structured_topology requires diameter
 virtual int diameter() const override;
-
-public:
-
 
 
 public:
@@ -80,6 +78,10 @@ public:
   virtual bool uniform_switches() const override { //DONE
   	return false;
   };
+
+  // new function written by Jeremiah
+  //virtual void new_routing_stage(packet* rtbl) override;
+
 
   /**
    * @brief connected_outports
@@ -126,6 +128,7 @@ public:
    * @return Whether a switch object should be built for a given switch_id
    */
   virtual bool switch_id_slot_filled(switch_id sid) const override; // DONE
+
 
   virtual int num_nodes() const override { // DONE
     int node_num = num_groups_ * switches_per_group_ * nodes_per_switch_;
@@ -214,7 +217,7 @@ public:
    *        required for all supported routing algorithms
    * @param [inout] m
    */
-  virtual void configure_vc_routing(std::map<routing::algorithm_t, int>& m) const override; // DONE (RECHECK)
+ // virtual void configure_vc_routing(std::map<routing::algorithm_t, int>& m) const override; // DONE (RECHECK)
 
   /**
    * @brief node_to_ejection_switch Given a destination node,
@@ -291,7 +294,7 @@ public:
   virtual void minimal_route_to_switch( //this is really the key
     switch_id current_sw_addr,
     switch_id dest_sw_addr,
-    routable::path& path) const override;
+    packet::path& path) const override;
 
   virtual bool node_to_netlink(node_id nid, node_id& net_id, int& offset) const override;
 
@@ -333,7 +336,6 @@ private:
 
  std::vector<std::vector<int>> distance_matrix_;
 
- std::unordered_set<int> ignore_groups_;
 
 private:
  
@@ -354,6 +356,15 @@ private:
 
 public:
 
+ bool is_global_port(int port) const;
+
+
+ switch_id random_intermediate_switch(switch_id current_sw,
+                             switch_id dest_sw, uint32_t seed) override;
+ 
+ switch_id random_intermediate_group(switch_id current_group,
+                             switch_id dest_group, uint32_t seed);
+
  int num_groups() {
  	return num_groups_;
  }
@@ -373,6 +384,7 @@ public:
  void add_to_traffic_matrix(int src_group, int dst_group, uint64_t num_bytes) {
   g2g_traffic_matrix_[src_group][dst_group] += num_bytes;
  };
+
 
 };
 
