@@ -534,15 +534,7 @@ void flexfly_topology_simplified::new_routing_stage(routable* rtbl) {
 // just 
 switch_id flexfly_topology_simplified::random_intermediate_switch(switch_id current_sw,
                              switch_id dest_sw, uint32_t seed) {
-  long nid = current_sw;
-  uint32_t attempt = 0;
-  
-  while (current_sw == nid) {
-    break;
-  }
-
-  long curr_group = long(current_sw);
-  return switch_id(nid);
+  return random_intermediate_group(current_sw, dest_group, seed);
 };
 
 

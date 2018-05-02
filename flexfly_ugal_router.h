@@ -19,9 +19,17 @@ namespace hw {
  */
 class flexfly_ugal_router : public ugal_router
 {
+  const char initial = 0;
+  const char ugal_stage = 1;
+  const char valiant_stage = 2;
+  const char final_stage = 3;
+  
+
+
   struct header : public ugal_router::header {
      char num_hops : 3;
      char num_group_hops : 3;
+     char stage: 3;
   };
   public:
   FactoryRegister("flexfly_simplified_ugal", router, flexfly_ugal_router,
@@ -48,10 +56,13 @@ class flexfly_ugal_router : public ugal_router
   int val_preference_factor_;
  
  private:
+  bool switch_paths(switch_id orig_dst, switch_id new_dst, packet::path& orig_path, packet::path& new_path);
+
   bool route_common(packet* pkt) const;
 
   flexfly_topology_simplified* ftop_;
 
+  hw::interconnect ic_;
 };
 
 }
