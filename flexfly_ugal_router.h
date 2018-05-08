@@ -4,6 +4,9 @@
 #include <sstmac/hardware/router/ugal_routing.h>
 #include <sstmac/hardware/router/router.h>
 #include <sstmac/hardware/router/valiant_routing.h>
+#include <sstmac/hardware/topology/topology.h>
+#include <sstmac/hardware/interconnect/interconnect.h>
+
 #include "flexfly_topology_simplified.h" 
 
 
@@ -19,11 +22,8 @@ namespace hw {
  */
 class flexfly_ugal_router : public ugal_router
 {
-  const char initial = 0;
-  const char ugal_stage = 1;
-  const char valiant_stage = 2;
-  const char final_stage = 3;
-  
+
+
 
 
   struct header : public ugal_router::header {
@@ -58,11 +58,15 @@ class flexfly_ugal_router : public ugal_router
  private:
   bool switch_paths(switch_id orig_dst, switch_id new_dst, packet::path& orig_path, packet::path& new_path);
 
-  bool route_common(packet* pkt) const;
+  bool route_common(packet* pkt);
+
+  void route_initial(packet* pkt, switch_id ej_addr);
 
   flexfly_topology_simplified* ftop_;
 
-  hw::interconnect ic_;
+  hw::interconnect* ic_;
+
+  uint32_t seed_;
 };
 
 }

@@ -4,9 +4,15 @@
 #include <sstmac/hardware/switch/network_switch.h>
 #include <sprockit/util.h>
 #include <sprockit/sim_parameters.h>
+#include <sstmac/common/event_manager.h>
 
 #include "flexfly_ugal_router.h"  
 #include "flexfly_topology_simplified.h"
+
+const char initial = 0;
+const char ugal_stage = 1;
+const char valiant_stage = 2;
+const char final_stage = 3;
 
 namespace sstmac {
 namespace hw {
@@ -16,17 +22,18 @@ flexfly_ugal_router::flexfly_ugal_router(sprockit::sim_parameters *params, topol
 {
   val_threshold_ = params->get_optional_int_param("ugal_threshold", 0);
   val_preference_factor_ = params->get_optional_int_param("valiant_preference_factor",1);
-  ic_ = nullptr;
-
+  seed_ = params->get_optional_int_param("seed", 30);
 };
 
-void flexfly_ugal_router::route_initial(packet* pkt) const {
-  packet::path& pth = pkt->get_current_path();
-  std::vector<topology::connection> reachable_groups;
+void flexfly_ugal_router::route_initial(packet* pkt, switch_id ej_addr) {
+  packet::path& pth = pkt->current_path();
   packet::path min_path;
   packet::path valiant_path;
-  switch_paths();
-
+  switch_id intermediate_group = ftop_->random_intermediate_switch(my_addr_, ej_addr, seed_);
+  bool use_alternative_path = switch_paths(ej_addr, 
+                                            intermediate_group, 
+                                            min_path, 
+                                            valiant_path);
 };
 
 bool flexfly_ugal_router::switch_paths(switch_id orig_dst, 
@@ -46,22 +53,23 @@ bool flexfly_ugal_router::switch_paths(switch_id orig_dst,
   return valiant_weight < orig_weight;
 }
 
-bool flexfly_ugal_router::route_common(packet* pkt) const {
+bool flexfly_ugal_router::route_common(packet* pkt) {
   uint16_t port;
   switch_id ej_addr = ftop_->node_to_ejection_switch(pkt->toaddr(), port);
-  packet::path& pth = pkt->get_current_path();
-  pth->set_outport(port);
+  packet::path& pth = pkt->current_path();
+  pth.set_outport(port);
   if (my_addr_ == ej_addr) {
     // checks if we are at the ejection switch yet
     return true;
   } 
   auto hdr = pkt->get_header<header>();
   switch(hdr->stage) {
-    case(initial): 
-        route_initial(pkt);
-        hdr->stage = valiant;
+    case(initial_stage): 
+        route_initial(pkt, ej_addr);
+        hdr->stage = valiant_stage;
         break;
-    case(valiant):
+    case(valiant_stage):
+      std::cout << "hello" << std::endl;
         break;
   }
   // if we got here, that means that we haven't reached our destination switch yet
