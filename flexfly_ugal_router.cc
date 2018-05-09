@@ -9,13 +9,12 @@
 #include "flexfly_ugal_router.h"  
 #include "flexfly_topology_simplified.h"
 
-const char initial = 0;
-const char ugal_stage = 1;
-const char valiant_stage = 2;
-const char final_stage = 3;
+
 
 namespace sstmac {
 namespace hw {
+
+
 
 flexfly_ugal_router::flexfly_ugal_router(sprockit::sim_parameters *params, topology *top, network_switch *netsw)
   :  ugal_router(params, top, netsw)
@@ -34,6 +33,10 @@ void flexfly_ugal_router::route_initial(packet* pkt, switch_id ej_addr) {
                                             intermediate_group, 
                                             min_path, 
                                             valiant_path);
+  header* hdr = pkt->get_header<header>();  
+
+  if (use_alternative_path) hdr->stage = valiant_stage;
+  else hdr->stage = minimal_stage;
 };
 
 bool flexfly_ugal_router::switch_paths(switch_id orig_dst, 
@@ -65,11 +68,18 @@ bool flexfly_ugal_router::route_common(packet* pkt) {
   auto hdr = pkt->get_header<header>();
   switch(hdr->stage) {
     case(initial_stage): 
+        // at first we need to decide whether or not there is congestion, if there isn't
+        // congestion, set packet to minimal stage, else set it to valiant stage
         route_initial(pkt, ej_addr);
         hdr->stage = valiant_stage;
         break;
     case(valiant_stage):
-      std::cout << "hello" << std::endl;
+        pkt->set_dest_switch(ej_addr);
+        break;
+    case(minimal_only_stage):
+        break;
+    case(final_stage):
+        // should never really get here I think
         break;
   }
   // if we got here, that means that we haven't reached our destination switch yet

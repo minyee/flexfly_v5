@@ -23,17 +23,22 @@ namespace hw {
 class flexfly_ugal_router : public ugal_router
 {
 
-
-
-
   struct header : public ugal_router::header {
      char num_hops : 3;
      char num_group_hops : 3;
      char stage: 3;
   };
+
   public:
+
+  static const char initial = 0;
+  static const char valiant_stage = 1;
+  static const char minimal_stage = 2;   
+  static const char final_stage = 4;
+  
   FactoryRegister("flexfly_simplified_ugal", router, flexfly_ugal_router,
               "router implementing ugal congestion-aware routing in the flexfly_topology")
+
   flexfly_ugal_router(sprockit::sim_parameters* params, topology* top, network_switch* netsw);
   
 
@@ -41,13 +46,9 @@ class flexfly_ugal_router : public ugal_router
     return "flexfly_simplified_ugal";
   };
 
-
-
-
   virtual int num_vc() const override {
     return 3;
   }
-
 
   virtual void route(packet* pkt) override;
 
@@ -71,6 +72,5 @@ class flexfly_ugal_router : public ugal_router
 
 }
 }
-
 
 #endif // UGAL_ROUTING_H
