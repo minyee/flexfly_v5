@@ -22,21 +22,30 @@ flexfly_ugal_router::flexfly_ugal_router(sprockit::sim_parameters *params, topol
   val_threshold_ = params->get_optional_int_param("ugal_threshold", 0);
   val_preference_factor_ = params->get_optional_int_param("valiant_preference_factor",1);
   seed_ = params->get_optional_int_param("seed", 30);
+  ic_ = nullptr;
+  ftop_ = safe_cast(flexfly_topology_simplified, top);
 };
+
 
 void flexfly_ugal_router::route_initial(packet* pkt, switch_id ej_addr) {
   packet::path& pth = pkt->current_path();
   packet::path min_path;
   packet::path valiant_path;
   switch_id intermediate_group = ftop_->random_intermediate_switch(my_addr_, ej_addr, seed_);
+  std::cout << "ej_addr is: " << std::to_string(ej_addr) << " and my_addr_ is: " << std::to_string(my_addr_) << std::endl; 
   bool use_alternative_path = switch_paths(ej_addr, 
                                             intermediate_group, 
                                             min_path, 
                                             valiant_path);
   header* hdr = pkt->get_header<header>();  
 
-  if (use_alternative_path) hdr->stage = valiant_stage;
-  else hdr->stage = minimal_stage;
+  if (use_alternative_path) {
+    hdr->stage = valiant_stage;
+    pkt->set_dest_switch(intermediate_group);
+  } else {
+    hdr->stage = minimal_stage;
+    pkt->set_dest_switch(ej_addr);
+  }
 };
 
 bool flexfly_ugal_router::switch_paths(switch_id orig_dst, 
@@ -57,38 +66,48 @@ bool flexfly_ugal_router::switch_paths(switch_id orig_dst,
 }
 
 bool flexfly_ugal_router::route_common(packet* pkt) {
-  uint16_t port;
-  switch_id ej_addr = ftop_->node_to_ejection_switch(pkt->toaddr(), port);
+  uint16_t out_port;
+  uint16_t in_port;
+  switch_id ej_addr = ftop_->node_to_ejection_switch(pkt->toaddr(), out_port);
+  switch_id inj_addr = ftop_->node_to_ejection_switch(pkt->fromaddr(), in_port);
   packet::path& pth = pkt->current_path();
-  pth.set_outport(port);
+  auto hdr = pkt->get_header<header>();
+
+  uint16_t tmp;
+  if (my_addr_ == inj_addr) {
+    hdr->stage = initial_stage;
+  }
+
   if (my_addr_ == ej_addr) {
     // checks if we are at the ejection switch yet
+    pkt->set_dest_switch(ej_addr);
+    pth.set_outport(out_port);
     return true;
-  } 
-  auto hdr = pkt->get_header<header>();
+  }
+   
+
+
   switch(hdr->stage) {
     case(initial_stage): 
         // at first we need to decide whether or not there is congestion, if there isn't
         // congestion, set packet to minimal stage, else set it to valiant stage
         route_initial(pkt, ej_addr);
-        hdr->stage = valiant_stage;
         break;
     case(valiant_stage):
         pkt->set_dest_switch(ej_addr);
+        hdr->stage = final_stage;
         break;
     case(minimal_only_stage):
+        pkt->set_dest_switch(ej_addr);
+
+        hdr->stage = final_stage;
         break;
     case(final_stage):
+        abort();
         // should never really get here I think
         break;
   }
-  // if we got here, that means that we haven't reached our destination switch yet
   
-  uint64_t minimal_queue_length = UINT_MAX; 
-  switch_id target_group = my_addr_;
-
-  assert(target_group != my_addr_);
-  pkt->set_dest_switch(target_group);
   return false;
 };
 
@@ -98,20 +117,12 @@ void flexfly_ugal_router::route(packet* pkt) {
   if (ic_ == nullptr) {
     ic_ = netsw_->event_mgr()->interconn();
   }
-
-
   bool eject = route_common(pkt);
-
   if (eject) return; // if eject then no need to route anymore
 
   packet::path& path = pkt->current_path();
   ftop_->minimal_route_to_switch(my_addr_, pkt->dest_switch(), path);
-  auto hdr = pkt->get_header<header>();
-  path.vc = hdr->num_group_hops;
-  if (ftop_->is_global_port(path.outport())){
-    ++hdr->num_group_hops;
-  }
-  ++hdr->num_hops;
+  return;
 };
 
 

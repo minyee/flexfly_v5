@@ -34,7 +34,7 @@ flexfly_ugalG_router::flexfly_ugalG_router(sprockit::sim_parameters *params, top
 {
   //val_threshold_ = params->get_optional_int_param("ugal_threshold", 0);
   //val_preference_factor_ = params->get_optional_int_param("valiant_preference_factor",1);
-  //ic_ = netsw->event_mgr()->interconn();
+  ic_ = nullptr;
   ftop_ = safe_cast(flexfly_topology_simplified, top);
 };
 
@@ -52,15 +52,10 @@ void flexfly_ugalG_router::route_to_intermediate_group_stage(packet* pkt) {
   switch_id ej_addr = ftop_->node_to_injection_switch(pkt->toaddr(), port);
   
   if (ic_ == nullptr) ic_ = netsw_->event_mgr()->interconn();
-  std::cout << "errr wutttttt" << std::endl;
+  
   //const std::vector<network_switch*>& smap = ic_->switches();
-  //std::cout << "Number of switches: " << std::to_string(smap.size()) << std::endl;
-  std::cout << "max_switch_id: " << std::to_string(ftop_->max_switch_id()) << std::endl;
-  std::cout << "The value of toaddr() is: " << std::to_string(pkt->toaddr())
-    << " and the value of ej_addr is: " << std::to_string(ej_addr) << std::endl;
   network_switch* ej_switch = ic_->switch_at(ej_addr);
 
-  std::cout << "what about now" << std::endl;
   std::vector<topology::connection> reachable_groups_from_src;
   
   ftop_->connected_outports(my_addr_, reachable_groups_from_src);
@@ -115,7 +110,6 @@ void flexfly_ugalG_router::route_to_dest(packet* pkt) {
 
 
 void flexfly_ugalG_router::route(packet* pkt) {
-  std::cout << "route in" << std::endl;
   uint16_t in_port;
   uint16_t out_port;
   switch_id ej_addr = ftop_->node_to_injection_switch(pkt->toaddr(), out_port);
@@ -130,7 +124,6 @@ void flexfly_ugalG_router::route(packet* pkt) {
     // are at the ejection switch 
     packet::path& pth = pkt->current_path();
     pkt->set_outport(out_port);
-    std::cout << "route out1" << std::endl;
     return;
   }
   header* hdr = pkt->get_header<header>();
@@ -145,7 +138,6 @@ void flexfly_ugalG_router::route(packet* pkt) {
       break;
   }
   ftop_->minimal_route_to_switch(my_addr_, pkt->dest_switch(), pth); // route minimally to said group
-  std::cout << "route out2" << std::endl;
   return;
 };
 

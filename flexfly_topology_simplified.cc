@@ -261,6 +261,7 @@ bool flexfly_topology_simplified::switch_id_slot_filled(switch_id sid) const {
   switch_id flexfly_topology_simplified::node_to_ejection_switch(node_id addr, uint16_t& port) const {
     switch_id swid = node_to_switch(addr);
     switch_id group = group_from_swid(swid);
+
     group = addr/(switches_per_group_ * nodes_per_switch_);
     auto iter = switch_outport_connection_map_.find(group);
     int port_offset = 0;
@@ -548,6 +549,7 @@ bool flexfly_topology_simplified::is_global_port(int port) const {
 
 switch_id flexfly_topology_simplified::random_intermediate_group(switch_id current_group,
                              switch_id dest_group, uint32_t seed) {
+  
   assert(current_group != dest_group);
   long attempt = 0;
   bool not_satisfied = true;
@@ -558,7 +560,9 @@ switch_id flexfly_topology_simplified::random_intermediate_group(switch_id curre
       intermediate_group = intermediate_group_switch;
       break;
     }
+    attempt++;
   }   
+  
   return switch_id(intermediate_group);
 }
 
