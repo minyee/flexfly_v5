@@ -34,7 +34,7 @@ class flexfly_ugal_router : public ugal_router
   static const char initial = 0;
   static const char valiant_stage = 1;
   static const char minimal_stage = 2;   
-  static const char final_stage = 4;
+  static const char final_stage = 3;
   
   FactoryRegister("flexfly_simplified_ugal", router, flexfly_ugal_router,
               "router implementing ugal congestion-aware routing in the flexfly_topology")

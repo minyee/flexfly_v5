@@ -32,7 +32,6 @@ void flexfly_ugal_router::route_initial(packet* pkt, switch_id ej_addr) {
   packet::path min_path;
   packet::path valiant_path;
   switch_id intermediate_group = ftop_->random_intermediate_switch(my_addr_, ej_addr, seed_);
-  std::cout << "ej_addr is: " << std::to_string(ej_addr) << " and my_addr_ is: " << std::to_string(my_addr_) << std::endl; 
   bool use_alternative_path = switch_paths(ej_addr, 
                                             intermediate_group, 
                                             min_path, 
@@ -97,9 +96,8 @@ bool flexfly_ugal_router::route_common(packet* pkt) {
         pkt->set_dest_switch(ej_addr);
         hdr->stage = final_stage;
         break;
-    case(minimal_only_stage):
+    case(minimal_stage):
         pkt->set_dest_switch(ej_addr);
-
         hdr->stage = final_stage;
         break;
     case(final_stage):
