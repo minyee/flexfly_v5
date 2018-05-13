@@ -284,9 +284,9 @@ bool flexfly_topology_simplified::switch_id_slot_filled(switch_id sid) const {
     //int src_group = group_from_swid(src);
     //int dst_group = group_from_swid(dst);
     if (src == dst) { // same switch
-      return 1;
+      return 0;
     } else { // different group but can reach either by 1 global and 1 local or 1 local and then 1 global
-      return 3;
+      return 1;
       //return (distance_matrix_[src][dst] * 2) + 1;
     }
   };
