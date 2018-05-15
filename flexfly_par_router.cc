@@ -83,9 +83,7 @@ bool flexfly_par_router::route_common(packet* pkt) {
     pth.set_outport(out_port);
     return true;
   }
-   
-
-
+  
   switch(hdr->stage) {
     case(initial_stage): 
         // at first we need to decide whether or not there is congestion, if there isn't

@@ -25,27 +25,6 @@ flexfly_valiant_router::flexfly_valiant_router(sprockit::sim_parameters *params,
 };
 
 
-void flexfly_valiant_router::route_initial(packet* pkt, switch_id ej_addr) {
-  packet::path& pth = pkt->current_path();
-  packet::path min_path;
-  packet::path valiant_path;
-  switch_id intermediate_group = ftop_->random_intermediate_switch(my_addr_, ej_addr, seed_);
-  bool use_alternative_path = switch_paths(ej_addr, 
-                                            intermediate_group, 
-                                            min_path, 
-                                            valiant_path);
-  header* hdr = pkt->get_header<header>();  
-
-  if (use_alternative_path) {
-    hdr->stage = valiant_stage;
-    pkt->set_dest_switch(intermediate_group);
-  } else {
-    hdr->stage = minimal_stage;
-    pkt->set_dest_switch(ej_addr);
-  }
-};
-
-
 void flexfly_valiant_router::route(packet* pkt) {
   // make sure that the interconnect pointer isnt null
   if (ic_ == nullptr) {
@@ -57,24 +36,32 @@ void flexfly_valiant_router::route(packet* pkt) {
   switch_id ej_addr = ftop_->node_to_ejection_switch(pkt->toaddr(), outport);
   switch_id inj_addr = ftop_->node_to_ejection_switch(pkt->fromaddr(), inport);
   auto hdr = pkt->get_header<header>();
-  if (my_addr_ = inj_addr)
+  if (my_addr_ == inj_addr) {
     hdr->stage = initial_stage;
+  }
 
+  if (my_addr_ == ej_addr) {
+    pkt->set_outport(outport);
+    return;
+  }
+
+  switch_id intermediate_group = ftop_->random_intermediate_switch(my_addr_, ej_addr, seed_);
   switch(hdr->stage) {
-    case(initial_stage) :
-      // route to a random intermediate group
-      switch_id intermediate_group = random_intermediate_switch(my_addr_, ej_addr, seed_);
+    case(initial_stage):    
+      pkt->set_dest_switch(intermediate_group);
       hdr->stage = valiant_stage;
       break;
-    case(valiant_stage) :
-
+    case(valiant_stage):
+      pkt->set_dest_switch(ej_addr);
+      hdr->stage = final_stage;
       break;
-    case(final_stage) :
+    case(final_stage):
+      abort(); // there is an error, we should never reach this part of the code
       break;
   }
 
-  packet::path& pth = pkt->get_path();
-  ftop_->minimal_route_to_switch(pkt->dest_switch(), );
+  packet::path& pth = pkt->current_path();
+  ftop_->minimal_route_to_switch(my_addr_, pkt->dest_switch(), pth);
 };
 
 

@@ -33,8 +33,7 @@ class flexfly_valiant_router : public ugal_router
 
   static const char initial = 0;
   static const char valiant_stage = 1;
-  static const char minimal_stage = 2;   
-  static const char final_stage = 3;
+  static const char final_stage = 2;
   
   FactoryRegister("flexfly_simplified_ugal", router, flexfly_valiant_router,
               "router implementing ugal congestion-aware routing in the flexfly_topology")
@@ -57,8 +56,6 @@ class flexfly_valiant_router : public ugal_router
   int val_preference_factor_;
  
  private:
-
-  void route_initial(packet* pkt, switch_id ej_addr);
 
   flexfly_topology_simplified* ftop_;
 
