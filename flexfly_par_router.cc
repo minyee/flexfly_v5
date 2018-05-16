@@ -19,6 +19,7 @@ namespace hw {
 flexfly_par_router::flexfly_par_router(sprockit::sim_parameters *params, topology *top, network_switch *netsw)
   :  ugal_router(params, top, netsw)
 {
+  std::cout << "par router ayyyyyy" << std::endl;
   val_threshold_ = params->get_optional_int_param("ugal_threshold", 0);
   val_preference_factor_ = params->get_optional_int_param("valiant_preference_factor",1);
   seed_ = params->get_optional_int_param("seed", 30);

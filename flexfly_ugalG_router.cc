@@ -32,6 +32,7 @@ struct triple_tuple {
 flexfly_ugalG_router::flexfly_ugalG_router(sprockit::sim_parameters *params, topology *top, network_switch *netsw)
   :  ugal_router(params, top, netsw)
 {
+  std::cout << "UGALG router ayyyyy" << std::endl;
   //val_threshold_ = params->get_optional_int_param("ugal_threshold", 0);
   //val_preference_factor_ = params->get_optional_int_param("valiant_preference_factor",1);
   ic_ = nullptr;

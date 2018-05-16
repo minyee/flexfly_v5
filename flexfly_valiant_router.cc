@@ -19,6 +19,7 @@ namespace hw {
 flexfly_valiant_router::flexfly_valiant_router(sprockit::sim_parameters *params, topology *top, network_switch *netsw)
   :  ugal_router(params, top, netsw)
 {
+  std::cout << "Valiant router ayyyy" << std::endl;
   seed_ = params->get_optional_int_param("seed", 30);
   ic_ = nullptr;
   ftop_ = safe_cast(flexfly_topology_simplified, top);

@@ -1,5 +1,5 @@
 TARGET := libflexfly.so 
-SRC :=  greedy_flexfly_allocation.cc link_stealing.cc flexfly_topology_simplified.cc flexfly_ugal_router.cc flexfly_minimal_router.cc flexfly_ugalG_router.cc flexfly_valiant_router.cc
+SRC :=  greedy_flexfly_allocation.cc link_stealing.cc flexfly_topology_simplified.cc flexfly_ugal_router.cc flexfly_minimal_router.cc flexfly_ugalG_router.cc flexfly_valiant_router.cc flexfly_par_router.cc
 
 CXX :=    libsst++
 CC :=     libsstcc
